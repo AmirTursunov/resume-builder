@@ -35,8 +35,8 @@ const Home = () => {
           <SignOutButton />
         </div>
       </nav>
-      <div className="flex flex-col justify-center items-center my-20 gap-10 border">
-        <h1 className=" text-2xl sm:text-3xl md:text-4xl lg:text-6xl max-w-[800px] text-center leading-18 font-medium">
+      <div className="flex flex-col justify-center items-center my-20 gap-10">
+        <h1 className="text-5xl md:text-6xl max-w-[405px] md:max-w-[800px] text-center  sm:leading-18 font-medium">
           Create Professional Resumes with Ease
         </h1>
         <p className="max-w-4xl text-center  tracking-normal">
