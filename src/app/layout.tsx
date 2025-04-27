@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
-import { Poppins } from "next/font/google";
+import { Josefin_Sans } from "next/font/google";
 
-const poppins = Poppins({
+const josefin = Josefin_Sans({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
-  variable: "--font-poppins",
+  variable: "--font-josefin",
 });
 
 export const metadata: Metadata = {
-  title: "GreenShop",
-  description: "Beautiful plant shop",
+  title: "Resume",
+  description: "Resume Builder",
 };
 
 export default function RootLayout({
@@ -21,8 +21,8 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en" className={poppins.variable}>
-        <body className="font-poppins">{children}</body>
+      <html lang="en" className={josefin.variable}>
+        <body className="font-josefin">{children}</body>
       </html>
     </ClerkProvider>
   );
