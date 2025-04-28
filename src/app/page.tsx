@@ -5,6 +5,7 @@ import "./section1.css";
 import Features from "./features/page";
 import { FiLogIn } from "react-icons/fi";
 import Testimonials from "./testimonials/page";
+import Footer from "./footer/page";
 const Home = () => {
   return (
     <div>
@@ -54,13 +55,17 @@ const Home = () => {
           </button>
         </div>
         <div className="flex items-center justify-center">
-          <div className="my-20 bg-gray-300 w-[1200px] h-[2px]"></div>
+          <hr
+            style={{ width: "80%", margin: "auto" }}
+            className="border-gray-300"
+          />
         </div>
       </div>
 
       <div className="bg-[#f8f9ff]">
         <Features />
         <Testimonials />
+        <Footer />
       </div>
     </div>
   );

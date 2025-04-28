@@ -1,5 +1,3 @@
-// components/Testimonials.jsx
-
 import React from "react";
 
 const testimonials = [
