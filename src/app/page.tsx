@@ -1,5 +1,5 @@
 "use client";
-import { SignOutButton } from "@clerk/nextjs";
+import { SignOutButton, useUser } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import "./section1.css";
 import Features from "./features/page";
@@ -7,6 +7,15 @@ import { FiLogIn } from "react-icons/fi";
 import Testimonials from "./testimonials/page";
 import Footer from "./footer/page";
 const Home = () => {
+  const { user } = useUser();
+  function goToDashboard() {
+    if (user?.id) {
+      redirect(`/dashboard/${user?.id}`);
+    } else {
+      alert("You need to sign-in.");
+      redirect("/sign-in");
+    }
+  }
   return (
     <div>
       <div className="section1">
@@ -50,7 +59,10 @@ const Home = () => {
             easy-to-use form builder. Lorem ipsum dolor sit amet, consectetur
             adipiscing elit.
           </p>
-          <button className="bg-[#164E63] py-3 rounded text-white px-5 hover:bg-cyan-800 cursor-pointer">
+          <button
+            onClick={goToDashboard}
+            className="bg-[#164E63] py-3 rounded text-white px-5 hover:bg-cyan-800 cursor-pointer"
+          >
             Get Started
           </button>
         </div>
