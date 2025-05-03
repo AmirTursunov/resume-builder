@@ -2,6 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { Drawer } from "vaul";
 import { FiEdit, FiTrash } from "react-icons/fi";
+import { FaFileDownload } from "react-icons/fa";
+import { useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { supabase } from "@/app/supabaseClient";
+
 interface Experience {
   companyName: string;
   role: string;
@@ -27,6 +33,10 @@ interface Education {
 interface Skill {
   name: string;
   skillList: string;
+}
+interface Language {
+  name: string;
+  level: string;
 }
 const CreateResume = () => {
   const [openExp, setOpenExp] = useState(false);
@@ -75,7 +85,8 @@ const CreateResume = () => {
     name: "",
     skillList: "",
   });
-  const [language, setLanguage] = useState({
+  const [language, setLanguage] = useState<Language[]>([]);
+  const [currentLanguage, setCurrentLanguage] = useState({
     name: "",
     level: "",
   });
@@ -94,6 +105,81 @@ const CreateResume = () => {
     }
   }, [openEdu]);
 
+  useEffect(() => {
+    const editResume = localStorage.getItem("editResume");
+    if (editResume) {
+      fetchResumeData(editResume);
+    }
+  }, []);
+  // edit function
+  async function fetchResumeData(id: string) {
+    // general
+    const { data: generalQuestion } = await supabase
+      .from("resumes")
+      .select("*")
+      .eq("resume_title_id", id)
+      .single();
+    if (generalQuestion) {
+      setGeneral({
+        fullname: generalQuestion.fullName,
+        email: generalQuestion.email,
+        mobileNumber: generalQuestion.mobileNumber,
+        linkedIn: generalQuestion.linkedIn,
+        gitHub: generalQuestion.gitHub,
+        portfolio: generalQuestion.portfolio,
+        address: generalQuestion.address,
+        jobTitle: generalQuestion.jobTitle,
+        summary: generalQuestion.summary,
+      });
+    }
+
+    // experience
+    const { data: experience } = await supabase
+      .from("experiences")
+      .select("*")
+      .eq("resume_id", id);
+
+    if (experience) {
+      setExperiences(experience);
+    }
+    // projects
+    const { data: projects } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("resume_id", id);
+
+    if (projects) {
+      setProjects(projects);
+    }
+    // education
+    const { data: education } = await supabase
+      .from("educations")
+      .select("*")
+      .eq("resume_id", id);
+
+    if (education) {
+      setEducation(education);
+    }
+    // skills
+    const { data: skills } = await supabase
+      .from("skills")
+      .select("*")
+      .eq("resume_id", id);
+
+    if (skills) {
+      setSkills(skills);
+    }
+    // language
+    const { data: language } = await supabase
+      .from("languages")
+      .select("*")
+      .eq("resume_id", id);
+
+    if (language) {
+      setLanguage(language);
+    }
+  }
+
   const toggleDrawer = () => setOpenExp(!openExp);
   const toggleDrawerPro = () => setOpenPro(!openPro);
   const toggleDrawerEdu = () => setOpenEdu(!openEdu);
@@ -104,8 +190,7 @@ const CreateResume = () => {
       alert("Iltimos, start date ni tanlang.");
       return;
     }
-    const today =
-      new Date().toISOString().split("T")[0] + " " + " (I am still working)";
+    const today = new Date().toISOString().split("T")[0];
     const newExperience = {
       companyName: currentExperience.companyName,
       role: currentExperience.role,
@@ -156,12 +241,7 @@ const CreateResume = () => {
     setOpenPro(false);
   }
   async function handleSaveEducation() {
-    if (!currentEducation.startDate) {
-      alert("Iltimos, start date ni tanlang.");
-      return;
-    }
-    const today =
-      new Date().toISOString().split("T")[0] + " " + " (I am still studying)";
+    const today = new Date().toISOString().split("T")[0];
     const newEducation = {
       institution: currentEducation.institution,
       degree: currentEducation.degree,
@@ -217,6 +297,26 @@ const CreateResume = () => {
     setEditingIndex(null);
     setOpenSkill(false);
   }
+  async function handleSaveLanguage() {
+    const newLang = {
+      name: currentLanguage.name,
+      level: currentLanguage.level,
+    };
+
+    if (editingIndex !== null) {
+      const updated = [...language];
+      updated[editingIndex] = currentLanguage;
+      setLanguage(updated);
+    } else {
+      setLanguage((prevLang) => [...prevLang, newLang]);
+    }
+    setCurrentLanguage({
+      name: "",
+      level: "",
+    });
+    setEditingIndex(null);
+    setOpenLang(false);
+  }
   function deleteExperience(index: number) {
     setExperiences((prev) => prev.filter((_, i) => i !== index));
   }
@@ -249,6 +349,134 @@ const CreateResume = () => {
   function deleteSkill(index: number) {
     setSkills((prev) => prev.filter((_, i) => i !== index));
   }
+  function deleteLang(index: number) {
+    setLanguage((prev) => prev.filter((_, i) => i !== index));
+  }
+  function editLang(index: number) {
+    setCurrentLanguage(language[index]);
+    setEditingIndex(index);
+    setOpenLang(true);
+  }
+
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleDownload = async () => {
+    const inputData = contentRef.current;
+    if (!inputData) return;
+
+    try {
+      const canvas = await html2canvas(inputData, {
+        scale: 2, // Rasm sifatini yaxshilaydi
+        useCORS: true, // Tashqi rasmlar uchun
+        scrollY: -window.scrollY,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: "a4",
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      const ratio =
+        Math.min(pageWidth / imgWidth, pageHeight / imgHeight) * 1.07;
+
+      const finalWidth = imgWidth * ratio;
+      const finalHeight = imgHeight * ratio;
+
+      const x = (pageWidth - finalWidth) / 2;
+      const y = (pageHeight - finalHeight) / 2;
+
+      pdf.addImage(imgData, "PNG", x, y, finalWidth, finalHeight);
+      pdf.save("my-resume.pdf");
+    } catch (error) {
+      console.error("PDF export error:", error);
+    }
+
+    // save to supabase
+    const resumeId = localStorage.getItem("resume");
+
+    // general
+    const { data: existingResume } = await supabase
+      .from("resumes")
+      .select("id")
+      .eq("resume_title_id", resumeId)
+      .maybeSingle();
+
+    const generalData = {
+      fullName: general.fullname,
+      email: general.email,
+      mobileNumber: general.mobileNumber,
+      linkedIn: general.linkedIn,
+      gitHub: general.gitHub,
+      portfolio: general.portfolio,
+      address: general.address,
+      jobTitle: general.jobTitle,
+      summary: general.summary,
+      resume_title_id: resumeId,
+    };
+
+    if (existingResume) {
+      await supabase
+        .from("resumes")
+        .update(generalData)
+        .eq("resume_title_id", resumeId);
+    } else {
+      await supabase.from("resumes").insert([generalData]);
+    }
+
+    await supabase.from("projects").delete().eq("resume_id", resumeId);
+    await supabase.from("experiences").delete().eq("resume_id", resumeId);
+    await supabase.from("educations").delete().eq("resume_id", resumeId);
+    await supabase.from("skills").delete().eq("resume_id", resumeId);
+    await supabase.from("languages").delete().eq("resume_id", resumeId);
+
+    // INSERT
+    await supabase.from("projects").insert(
+      projects.map((project) => ({
+        ...project,
+        resume_id: resumeId,
+      }))
+    );
+
+    await supabase.from("experiences").insert(
+      experiences.map((experience) => ({
+        ...experience,
+        resume_id: resumeId,
+      }))
+    );
+
+    await supabase.from("educations").insert(
+      education.map((edu) => ({
+        ...edu,
+        resume_id: resumeId,
+      }))
+    );
+
+    await supabase.from("skills").insert(
+      skills.map((skill) => ({
+        ...skill,
+        resume_id: resumeId,
+      }))
+    );
+
+    const { error } = await supabase.from("languages").insert(
+      language.map((lang) => ({
+        ...lang,
+        resume_id: resumeId,
+      }))
+    );
+
+    if (error) console.log("Language insert error:", error);
+  };
+
   return (
     <div className="flex flex-col md:flex-row min-h-screen p-4 md:p-8 bg-gray-100">
       {/* Left form */}
@@ -262,6 +490,8 @@ const CreateResume = () => {
               Full Name
             </label>
             <input
+              value={general.fullname}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, fullname: e.target.value })
               }
@@ -272,6 +502,8 @@ const CreateResume = () => {
           <div>
             <label className="block text-sm font-semibold mb-1">Email</label>
             <input
+              value={general.email}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, email: e.target.value })
               }
@@ -284,6 +516,8 @@ const CreateResume = () => {
               Mobile Number
             </label>
             <input
+              value={general.mobileNumber}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, mobileNumber: e.target.value })
               }
@@ -294,21 +528,25 @@ const CreateResume = () => {
           <div>
             <label className="block text-sm font-semibold mb-1">LinkedIn</label>
             <input
+              value={general.linkedIn}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, linkedIn: e.target.value })
               }
               className="w-full border p-2 rounded"
-              placeholder="linkedin.com/username"
+              placeholder="linkedin.com"
             />
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1">GitHub</label>
             <input
+              value={general.gitHub}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, gitHub: e.target.value })
               }
               className="w-full border p-2 rounded"
-              placeholder="github.com/username"
+              placeholder="github.com"
             />
           </div>
           <div>
@@ -316,6 +554,8 @@ const CreateResume = () => {
               Portfolio
             </label>
             <input
+              value={general.portfolio}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, portfolio: e.target.value })
               }
@@ -326,6 +566,8 @@ const CreateResume = () => {
           <div>
             <label className="block text-sm font-semibold mb-1">Address</label>
             <input
+              value={general.address}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, address: e.target.value })
               }
@@ -338,6 +580,8 @@ const CreateResume = () => {
               Job Title
             </label>
             <input
+              value={general.jobTitle}
+              required
               onChange={(e) =>
                 setGeneral({ ...general, jobTitle: e.target.value })
               }
@@ -349,6 +593,8 @@ const CreateResume = () => {
         <div className="mb-6">
           <label className="block text-sm font-semibold mb-1">Summary</label>
           <textarea
+            value={general.summary}
+            required
             onChange={(e) =>
               setGeneral({ ...general, summary: e.target.value })
             }
@@ -415,6 +661,7 @@ const CreateResume = () => {
                           Company Name
                         </label>
                         <input
+                          required
                           value={currentExperience.companyName}
                           onChange={(e) =>
                             setCurrentExperience({
@@ -431,6 +678,7 @@ const CreateResume = () => {
                           Role
                         </label>
                         <input
+                          required
                           value={currentExperience.role}
                           onChange={(e) =>
                             setCurrentExperience({
@@ -450,6 +698,7 @@ const CreateResume = () => {
                           Location
                         </label>
                         <input
+                          required
                           value={currentExperience.location}
                           onChange={(e) =>
                             setCurrentExperience({
@@ -469,6 +718,7 @@ const CreateResume = () => {
                           Start date
                         </label>
                         <input
+                          required
                           type="date"
                           value={currentExperience.start_date}
                           onChange={(e) =>
@@ -583,6 +833,7 @@ const CreateResume = () => {
                           Project Name
                         </label>
                         <input
+                          required
                           value={currentProjects.projectName}
                           onChange={(e) =>
                             setCurrentProjects({
@@ -602,6 +853,7 @@ const CreateResume = () => {
                           Deploy link
                         </label>
                         <input
+                          required
                           value={currentProjects.deployLink}
                           onChange={(e) =>
                             setCurrentProjects({
@@ -618,6 +870,7 @@ const CreateResume = () => {
                           Repository link
                         </label>
                         <input
+                          required
                           value={currentProjects.repoLink}
                           onChange={(e) =>
                             setCurrentProjects({
@@ -718,6 +971,7 @@ const CreateResume = () => {
                           Institution Name
                         </label>
                         <input
+                          required
                           value={currentEducation.institution}
                           onChange={(e) =>
                             setCurrentEducation({
@@ -737,6 +991,7 @@ const CreateResume = () => {
                           Degree
                         </label>
                         <input
+                          required
                           value={currentEducation.degree}
                           onChange={(e) =>
                             setCurrentEducation({
@@ -753,6 +1008,7 @@ const CreateResume = () => {
                           Field of study
                         </label>
                         <input
+                          required
                           value={currentEducation.field}
                           onChange={(e) =>
                             setCurrentEducation({
@@ -772,6 +1028,7 @@ const CreateResume = () => {
                           Start date
                         </label>
                         <input
+                          required
                           value={currentEducation.startDate}
                           onChange={(e) =>
                             setCurrentEducation({
@@ -885,6 +1142,7 @@ const CreateResume = () => {
                           Skills
                         </label>
                         <input
+                          required
                           value={currentSkills.name}
                           onChange={(e) =>
                             setCurrentSkills({
@@ -903,6 +1161,7 @@ const CreateResume = () => {
                           Skill list
                         </label>
                         <input
+                          required
                           value={currentSkills.skillList}
                           onChange={(e) =>
                             setCurrentSkills({
@@ -933,6 +1192,36 @@ const CreateResume = () => {
         {/* Language */}
         <div className="mb-6">
           <h3 className="text-xl font-bold mb-2">Language</h3>
+          <div>
+            {language.map((itm, index) => (
+              <div
+                key={index}
+                className="mb-3 p-3 border rounded-lg shadow-sm bg-white flex justify-between items-center"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {itm.name}
+                  </h3>
+                  <p className="text-gray-600">{itm.level} </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => editLang(index)}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    <FiEdit />
+                  </button>
+                  <button
+                    onClick={() => deleteLang(index)}
+                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    <FiTrash />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
           <div
             onClick={toggleDrawerLang}
             className="border-dashed border-2 p-4 rounded text-center cursor-pointer"
@@ -956,9 +1245,11 @@ const CreateResume = () => {
                           Language
                         </label>
                         <input
+                          value={currentLanguage.name}
+                          required
                           onChange={(e) =>
-                            setLanguage({
-                              ...language,
+                            setCurrentLanguage({
+                              ...currentLanguage,
                               name: e.target.value,
                             })
                           }
@@ -971,9 +1262,11 @@ const CreateResume = () => {
                           Level
                         </label>
                         <select
+                          value={currentLanguage.level}
+                          required
                           onChange={(e) =>
-                            setLanguage({
-                              ...language,
+                            setCurrentLanguage({
+                              ...currentLanguage,
                               level: e.target.value,
                             })
                           }
@@ -987,7 +1280,10 @@ const CreateResume = () => {
                       </div>
                     </div>
                     <div className="text-center mt-4">
-                      <button className="py-2 w-40 rounded bg-black text-white ">
+                      <button
+                        onClick={handleSaveLanguage}
+                        className="py-2 w-40 rounded bg-black text-white "
+                      >
                         Save
                       </button>
                     </div>
@@ -1000,7 +1296,11 @@ const CreateResume = () => {
       </div>
 
       {/* Right  */}
-      <div className="w-full md:w-1/2 mt-8 md:mt-0 bg-white border rounded-lg shadow-lg p-8 space-y-6 text-gray-800">
+      <div
+        ref={contentRef}
+        style={{ color: "#1f2937", height: "1123px" }}
+        className="w-full md:w-1/2 mt-8 md:mt-0 bg-white rounded-lg p-8 space-y-6 text-gray-800"
+      >
         {/* Header */}
         <div className="text-center pb-4">
           <h1 className="text-3xl font-bold">{general.fullname}</h1>
@@ -1012,22 +1312,25 @@ const CreateResume = () => {
             </p>
             <p>
               <a
+                style={{ color: "blue" }}
                 href={general.portfolio}
-                className="text-blue-600 hover:underline"
+                className=" hover:underline"
               >
                 Portfolio
               </a>{" "}
               |
               <a
+                style={{ color: "blue" }}
                 href={general.gitHub}
-                className="text-blue-600 hover:underline ml-1"
+                className=" hover:underline ml-1"
               >
                 GitHub
               </a>{" "}
               |
               <a
+                style={{ color: "blue" }}
                 href={general.linkedIn}
-                className="text-blue-600 hover:underline ml-1"
+                className=" hover:underline ml-1"
               >
                 LinkedIn
               </a>
@@ -1035,20 +1338,23 @@ const CreateResume = () => {
           </div>
 
           <div className="mt-4">
-            <p className="text-sm text-gray-700 italic">{general.summary}</p>
+            <p style={{ color: "#374151" }} className="text-sm italic">
+              {general.summary}
+            </p>
           </div>
         </div>
-
         {/* Experience */}
         <div>
-          <h2 className="text-xl font-semibold border-b mb-2">Experience</h2>
+          <h2 className="text-xl font-semibold border-b mb-2 pb-3 ">
+            Experience
+          </h2>
           {experiences.map((itm, index) => (
             <div key={index} className="mb-4 flex justify-between">
               <div>
                 <h3 className="text-lg font-bold">{itm.companyName}</h3>
-                <p className="font-medium">{itm.role}</p>
+                <p className="text-sm">{itm.role}</p>
               </div>
-              <div className="text-sm text-gray-700">
+              <div style={{ color: "#374151" }} className="text-sm">
                 <p>
                   {itm.start_date} – {itm.end_date} | {itm.location}
                 </p>
@@ -1056,15 +1362,16 @@ const CreateResume = () => {
             </div>
           ))}
         </div>
-
         {/* Projects */}
         <div>
-          <h2 className="text-xl font-semibold border-b mb-2">Projects</h2>
+          <h2 className="text-xl font-semibold border-b  mb-2 pb-3">
+            Projects
+          </h2>
           {projects.map((itm, i) => {
             return (
               <div key={i}>
                 <h3 className="font-semibold">{itm.projectName}</h3>
-                <div className="text-sm flex gap-2 font-medium text-blue-600">
+                <div className="text-sm flex gap-2 font-medium ">
                   <i>
                     <a
                       href={itm.deployLink}
@@ -1087,15 +1394,18 @@ const CreateResume = () => {
                     </a>
                   </i>
                 </div>
-                <p className="text-sm text-gray-500">{itm.description}</p>
+                <p style={{ color: "#6b7280" }} className="text-sm ">
+                  {itm.description}
+                </p>
               </div>
             );
           })}
         </div>
-
         {/* Education */}
         <div>
-          <h2 className="text-xl font-semibold border-b mb-2">Education</h2>
+          <h2 className="text-xl font-semibold border-b  mb-2 pb-3">
+            Education
+          </h2>
           {education.map((itm, i) => {
             return (
               <div key={i} className="flex justify-between">
@@ -1107,7 +1417,7 @@ const CreateResume = () => {
                   <p className="text-sm">{itm.description}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">
+                  <p style={{ color: "#4b5563" }} className="text-sm">
                     {itm.startDate} – {itm.endDate}
                   </p>
                 </div>
@@ -1115,17 +1425,19 @@ const CreateResume = () => {
             );
           })}
         </div>
-
         {/* Skills */}
         <div>
-          <h2 className="text-xl font-semibold border-b mb-2">Skills</h2>
+          <h2 className="text-xl font-semibold border-b  mb-2 pb-3">Skills</h2>
           {skills.map((itm, i) => {
             return (
               <div key={i} className="flex justify-between">
                 <div>
                   <h3 className="font-semibold">
                     {itm.name} :{" "}
-                    <span className="text-sm text-gray-500 font-normal">
+                    <span
+                      style={{ color: "#6b7280" }}
+                      className="text-sm font-normal"
+                    >
                       {itm.skillList}
                     </span>
                   </h3>
@@ -1134,15 +1446,28 @@ const CreateResume = () => {
             );
           })}
         </div>
-
         {/* Languages */}
         <div>
-          <h2 className="text-xl font-semibold border-b mb-2">Languages</h2>
-          <p className="text-sm">
-            {language.name} — {language.level}
-          </p>
+          <h2 className="text-xl font-semibold border-b  mb-2 pb-3">
+            Languages
+          </h2>
+          {language.map((itm, i) => {
+            return (
+              <div key={i}>
+                <p className="text-sm">
+                  {itm.name} — {itm.level}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
+      <button
+        onClick={handleDownload}
+        className="fixed bottom-4 right-4 w-15 h-15 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl shadow-lg hover:bg-blue-600 transition"
+      >
+        <FaFileDownload />
+      </button>
     </div>
   );
 };

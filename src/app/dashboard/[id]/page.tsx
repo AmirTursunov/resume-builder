@@ -26,24 +26,34 @@ const DashboardUser = () => {
       .from("resume_titles")
       .select("*")
       .eq("user_id", user?.id);
-    console.log(data);
 
     setResume(data || []);
   }
   async function handleSave() {
-    const { error } = await supabase.from("resume_titles").insert([
-      {
-        user_id: user?.id,
-        title: title,
-        created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-        updated_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-      },
-    ]);
+    const { data, error } = await supabase
+      .from("resume_titles")
+      .insert([
+        {
+          user_id: user?.id,
+          title: title,
+          created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+          updated_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+        },
+      ])
+      .select();
+
     setIsOpen(false);
-    if (!error) {
+
+    if (!error && data && data.length > 0) {
+      localStorage.setItem("resume", data[0].id.toString());
       redirect(`${user?.id}/createResume`);
     }
+
     console.log(error);
+  }
+  function editResume(id: string) {
+    localStorage.setItem("editResume", id);
+    redirect(`${user?.id}/createResume`);
   }
   return (
     <div className="flex min-h-screen">
@@ -145,7 +155,10 @@ const DashboardUser = () => {
                       <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
                         View
                       </button>
-                      <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded text-sm">
+                      <button
+                        onClick={() => editResume(itm.id)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded text-sm"
+                      >
                         Edit
                       </button>
                     </div>

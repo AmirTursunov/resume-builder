@@ -39,15 +39,20 @@ const Home = () => {
             </li>
           </ul>
 
-          <button
+          <div
             onClick={() => redirect("/sign-in")}
             className="flex items-center gap-2 bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-black px-4 py-2 rounded-md transition-colors"
           >
-            <span>Login</span>
-            <FiLogIn size={20} />
-          </button>
-          <div>
-            <SignOutButton />
+            {user ? (
+              <div>
+                <SignOutButton />
+              </div>
+            ) : (
+              <div>
+                <span>Login</span>
+                <FiLogIn size={20} />
+              </div>
+            )}
           </div>
         </nav>
         <div className="flex flex-col justify-center items-center my-20 gap-12">
