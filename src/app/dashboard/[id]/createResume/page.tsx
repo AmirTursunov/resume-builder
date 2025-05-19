@@ -2,11 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Drawer } from "vaul";
 import { FiEdit, FiTrash } from "react-icons/fi";
-import { FaFileDownload } from "react-icons/fa";
+import { FaFileDownload, FaHome } from "react-icons/fa";
 import { useRef } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { supabase } from "@/app/supabaseClient";
+import { useUser } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
 
 interface Experience {
   companyName: string;
@@ -39,6 +41,7 @@ interface Language {
   level: string;
 }
 const CreateResume = () => {
+  const { user } = useUser();
   const [openExp, setOpenExp] = useState(false);
   const [openPro, setOpenPro] = useState(false);
   const [openEdu, setOpenEdu] = useState(false);
@@ -476,7 +479,9 @@ const CreateResume = () => {
 
     if (error) console.log("Language insert error:", error);
   };
-
+  function goToDashboard() {
+    redirect(`/dashboard/${user?.id}`);
+  }
   return (
     <div className="flex flex-col md:flex-row min-h-screen p-4 md:p-8 bg-gray-100">
       {/* Left form */}
@@ -1462,6 +1467,12 @@ const CreateResume = () => {
           })}
         </div>
       </div>
+      <button
+        onClick={goToDashboard}
+        className="fixed bottom-4 right-25 w-15 h-15 rounded-full bg-gray-500 flex items-center justify-center text-white text-3xl shadow-lg hover:bg-gray-800 transition"
+      >
+        <FaHome />
+      </button>
       <button
         onClick={handleDownload}
         className="fixed bottom-4 right-4 w-15 h-15 rounded-full bg-blue-500 flex items-center justify-center text-white text-3xl shadow-lg hover:bg-blue-600 transition"

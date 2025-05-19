@@ -1,11 +1,12 @@
 "use client";
-import { SignIn } from "@clerk/nextjs";
+import { SignIn, useUser } from "@clerk/nextjs";
 
 const Login = () => {
+  const { user } = useUser();
   return (
-    <div className="d-flex justify-content-center mt-5">
+    <div className="flex justify-center" style={{ marginTop: "100px" }}>
       <div className="mt-5">
-        <SignIn />
+        <SignIn afterSignInUrl={`/dashboard/${user?.id}`} />
       </div>
     </div>
   );
