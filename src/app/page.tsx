@@ -48,7 +48,7 @@ const Home = () => {
                 <SignOutButton />
               </div>
             ) : (
-              <div classname="flex items-center gap-2">
+              <div className="flex item-center gap-2">
                 <span>Login</span>
                 <FiLogIn size={20} />
               </div>
